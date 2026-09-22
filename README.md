@@ -9,7 +9,7 @@ Code owns the game rules (grid, collisions, legal-move filtering, timing). Each 
 
 ![pixel theme](https://img.shields.io/badge/theme-pixel-39ff14) ![node](https://img.shields.io/badge/node-%3E%3D20-blue)
 
-![JEV vs CLAUDE Snake screenshot](docs/screenshot.png)
+![JEV vs CLAUDE Snake screenshot](docs/image.png)
 
 ---
 
