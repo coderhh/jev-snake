@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JEV vs CLAUDE :: SNAKE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#0d0d1f; --panel:#1a1a2e; --panel2:#24244a; --ink:#e8e8f8; --dim:#8a8ab8;
+      --jev:#39ff14; --claude:#ff5cf4; --bad:#ff3860; --yellow:#ffe66d; --border:#3a3a6a;
+    }
+    *{box-sizing:border-box; image-rendering:pixelated;}
+    html{image-rendering:pixelated;}
+    body{
+      margin:0; min-height:100vh; padding:22px 14px 48px;
+      background:
+        linear-gradient(rgba(13,13,31,0.92),rgba(13,13,31,0.92)),
+        repeating-linear-gradient(0deg, transparent 0 3px, rgba(255,255,255,0.025) 3px 4px);
+      color:var(--ink);
+      font-family:"VT323",monospace; font-size:20px; line-height:1.25;
+    }
+    .wrap{max-width:1180px; margin:0 auto;}
+    h1{
+      font-family:"Press Start 2P",monospace; font-size:22px; margin:0 0 10px;
+      letter-spacing:1px; text-shadow:3px 3px 0 #000;
+    }
+    .sub{color:var(--dim); margin:0 0 18px; font-size:18px;}
+    .pill{
+      display:inline-block; background:var(--panel2); border:2px solid var(--border);
+      padding:3px 8px; font-size:13px; color:var(--yellow); margin-left:8px;
+      font-family:"Press Start 2P",monospace; letter-spacing:0;
+    }
+    .controls{display:flex; flex-wrap:wrap; gap:10px; align-items:end; margin-bottom:18px;}
+    label{font-size:15px; color:var(--dim); display:block; margin-bottom:5px; font-family:"Press Start 2P",monospace;}
+    select{
+      background:var(--panel2); border:3px solid var(--border); color:var(--ink);
+      padding:8px 10px; font-size:18px; font-family:"VT323",monospace;
+      box-shadow:inset 2px 2px 0 #000;
+    }
+    button{
+      background:var(--panel2); color:var(--ink); border:3px solid var(--border);
+      padding:10px 16px; font-size:16px; font-family:"Press Start 2P",monospace; cursor:pointer;
+      box-shadow:3px 3px 0 #000; letter-spacing:0;
+    }
+    button:hover{background:var(--border);}
+    button:active{box-shadow:1px 1px 0 #000; transform:translate(2px,2px);}
+    button:disabled{opacity:.5; cursor:not-allowed;}
+    button.go{background:var(--jev); color:#062b00; border-color:#0a3; text-shadow:1px 1px 0 #fff8;}
+    button.go:active{box-shadow:1px 1px 0 #000;}
+    .games{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+    @media(max-width:860px){.games{grid-template-columns:1fr;}}
+    .card{
+      background:var(--panel); border:4px solid var(--border); padding:14px;
+      box-shadow:5px 5px 0 #000;
+    }
+    .card.jev{border-color:var(--jev);}
+    .card.claude{border-color:var(--claude);}
+    .card h2{
+      margin:0 0 12px; font-size:15px; font-family:"Press Start 2P",monospace;
+      display:flex; align-items:center; gap:8px; letter-spacing:0;
+    }
+    .dot{width:12px; height:12px; display:inline-block; box-shadow:2px 2px 0 #000;}
+    canvas.game{
+      display:block; background:#06061a; border:3px solid var(--border); width:100%; height:auto;
+      image-rendering:pixelated; image-rendering:crisp-edges;
+    }
+    .grid2{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px;}
+    .stat{background:var(--panel2); border:2px solid var(--border); padding:8px; box-shadow:inset 2px 2px 0 #000;}
+    .stat .k{color:var(--dim); font-size:12px; font-family:"Press Start 2P",monospace; letter-spacing:0;}
+    .stat .v{font-size:24px; font-weight:700; margin-top:3px; color:var(--yellow);}
+    .row{display:flex; justify-content:space-between; font-size:18px; padding:5px 0; border-bottom:2px dashed var(--border);}
+    .row:last-child{border-bottom:none;}
+    .row .k{color:var(--dim);}
+    .row .v{color:var(--ink);}
+    .status{font-size:16px; color:var(--dim); margin-top:8px; min-height:18px;}
+    .status.bad{color:var(--bad);}
+    a{color:var(--jev);}
+    /* pricing card */
+    .price-card{margin-top:16px;}
+    .price-card h2{font-family:"Press Start 2P",monospace; font-size:15px; margin:0 0 12px;}
+    table.prices{width:100%; border-collapse:collapse; font-size:18px;}
+    table.prices th,table.prices td{border:2px solid var(--border); padding:7px 9px; text-align:left;}
+    table.prices th{background:var(--panel2); font-family:"Press Start 2P",monospace; font-size:12px; color:var(--yellow);}
+    table.prices td.j{color:var(--jev);}
+    table.prices td.c{color:var(--claude);}
+    .verdict{
+      margin-top:12px; padding:10px; background:var(--panel2); border:3px solid var(--border);
+      box-shadow:inset 2px 2px 0 #000; font-size:18px;
+    }
+    .verdict b{color:var(--yellow);}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>JEV vs CLAUDE <span class="pill">SNAKE</span></h1>
+    <p class="sub">&gt; two snakes, one race. code owns the rules, models pick the move. who plays better &amp; what it costs.</p>
+
+    <div class="controls">
+      <div><label for="speed">TICK</label><select id="speed"><option value="600">SLOW 600</option><option value="350" selected>NORMAL 350</option><option value="180">FAST 180</option></select></div>
+      <div><label for="size">GRID</label><select id="size"><option value="10">10x10</option><option value="15" selected>15x15</option><option value="20">20x20</option></select></div>
+      <button id="play" class="go">AUTO-PLAY</button>
+      <button id="step">STEP</button>
+      <button id="reset">RESET</button>
+    </div>
+
+    <div class="games">
+      <div class="card jev">
+        <h2><span class="dot" style="background:var(--jev)"></span>JEV <span class="pill">SYSTEM ONE</span></h2>
+        <canvas class="game" id="jev-canvas" width="520" height="520"></canvas>
+        <div class="grid2">
+          <div class="stat"><div class="k">SCORE</div><div class="v" id="jev-score">0</div></div>
+          <div class="stat"><div class="k">MOVES</div><div class="v" id="jev-moves">0</div></div>
+          <div class="stat"><div class="k">TOK IN</div><div class="v" id="jev-tin">0</div></div>
+          <div class="stat"><div class="k">TOK OUT</div><div class="v" id="jev-tout">0</div></div>
+        </div>
+        <div class="row"><span class="k">TOTAL TOKENS</span><span class="v" id="jev-total">0</span></div>
+        <div class="row"><span class="k">COST / MOVE</span><span class="v" id="jev-cost">-</span></div>
+        <div class="row"><span class="k">TOTAL SPENT</span><span class="v" id="jev-spend">$0.000000</span></div>
+        <div class="row"><span class="k">AVG LATENCY</span><span class="v" id="jev-lat">- ms</span></div>
+        <div class="row"><span class="k">MOVES / SEC</span><span class="v" id="jev-mps">-</span></div>
+        <div class="row"><span class="k">ELAPSED</span><span class="v" id="jev-elapsed">0 s</span></div>
+        <div class="row"><span class="k">LAST MOVE</span><span class="v" id="jev-last">-</span></div>
+        <div class="status" id="jev-status"></div>
+      </div>
+
+      <div class="card claude">
+        <h2><span class="dot" style="background:var(--claude)"></span>CLAUDE <span class="pill" id="claude-model-pill">-</span></h2>
+        <canvas class="game" id="claude-canvas" width="520" height="520"></canvas>
+        <div class="grid2">
+          <div class="stat"><div class="k">SCORE</div><div class="v" id="claude-score">0</div></div>
+          <div class="stat"><div class="k">MOVES</div><div class="v" id="claude-moves">0</div></div>
+          <div class="stat"><div class="k">TOK IN</div><div class="v" id="claude-tin">0</div></div>
+          <div class="stat"><div class="k">TOK OUT</div><div class="v" id="claude-tout">0</div></div>
+        </div>
+        <div class="row"><span class="k">TOTAL TOKENS</span><span class="v" id="claude-total">0</span></div>
+        <div class="row"><span class="k">COST / MOVE</span><span class="v" id="claude-cost">-</span></div>
+        <div class="row"><span class="k">TOTAL SPENT</span><span class="v" id="claude-spend">$0.000000</span></div>
+        <div class="row"><span class="k">AVG LATENCY</span><span class="v" id="claude-lat">- ms</span></div>
+        <div class="row"><span class="k">MOVES / SEC</span><span class="v" id="claude-mps">-</span></div>
+        <div class="row"><span class="k">ELAPSED</span><span class="v" id="claude-elapsed">0 s</span></div>
+        <div class="row"><span class="k">LAST MOVE</span><span class="v" id="claude-last">-</span></div>
+        <div class="status" id="claude-status"></div>
+      </div>
+    </div>
+
+    <div class="card price-card">
+      <h2>PRICE TABLE</h2>
+      <table class="prices">
+        <thead><tr><th>MODEL</th><th>INPUT / MTOK</th><th>OUTPUT / MTOK</th><th>NOTE</th></tr></thead>
+        <tbody>
+          <tr><td class="j">JEV (jev-1.13)</td><td id="p-jev-in">-</td><td id="p-jev-out">-</td><td id="p-jev-note">-</td></tr>
+          <tr><td class="c">CLAUDE FABLE 5.1</td><td id="p-claude-in">-</td><td id="p-claude-out">-</td><td id="p-claude-note">-</td></tr>
+        </tbody>
+      </table>
+      <div class="verdict" id="verdict">loading price comparison...</div>
+    </div>
+  </div>
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    // A self-contained Snake game bound to one model endpoint.
+    function makeGame(prefix, color, endpoint) {
+      const canvas = $(prefix + "-canvas");
+      const ctx = canvas.getContext("2d");
+      let GRID, cell, snake, dir, nextDir, food, alive, score, moves;
+      let tin = 0, tout = 0, latSum = 0, latCount = 0, busy = false, cost = 0;
+      let lastDir = "-", lastConf = null, lastLat = null;
+
+      function resize() { GRID = parseInt($("size").value, 10); cell = canvas.width / GRID; }
+      function placeFood() {
+        while (true) {
+          const f = { x: Math.floor(Math.random() * GRID), y: Math.floor(Math.random() * GRID) };
+          if (!snake.some((s) => s.x === f.x && s.y === f.y)) return f;
+        }
+      }
+      function reset(sharedFood) {
+        resize();
+        const mid = Math.floor(GRID / 2);
+        snake = [{ x: mid, y: mid }, { x: mid - 1, y: mid }, { x: mid - 2, y: mid }];
+        dir = { x: 1, y: 0 }; nextDir = dir;
+        food = sharedFood || placeFood(); alive = true; score = 0; moves = 0;
+        tin = tout = latSum = latCount = 0; cost = 0; lastDir = "-"; lastConf = null; lastLat = null;
+        draw(); hud(); status("");
+      }
+      function dirName(d) { return d.x === 1 ? "right" : d.x === -1 ? "left" : d.y === 1 ? "down" : "up"; }
+      function nameDir(n) { return ({ up: { x: 0, y: -1 }, down: { x: 0, y: 1 }, left: { x: -1, y: 0 }, right: { x: 1, y: 0 } })[n]; }
+
+      function draw() {
+        ctx.fillStyle = "#06061a"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.strokeStyle = "rgba(255,255,255,0.05)"; ctx.lineWidth = 1;
+        for (let i = 1; i < GRID; i++) { ctx.beginPath(); ctx.moveTo(i * cell, 0); ctx.lineTo(i * cell, canvas.height); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0, i * cell); ctx.lineTo(canvas.width, i * cell); ctx.stroke(); }
+        ctx.fillStyle = "#ff3860"; ctx.fillRect(food.x * cell + 2, food.y * cell + 2, cell - 4, cell - 4);
+        snake.forEach((s, i) => { ctx.fillStyle = i === 0 ? color : color + "cc"; ctx.fillRect(s.x * cell + 1, s.y * cell + 1, cell - 2, cell - 2); });
+      }
+      function hud() {
+        $(prefix + "-score").textContent = score;
+        $(prefix + "-moves").textContent = moves;
+        $(prefix + "-tin").textContent = tin;
+        $(prefix + "-tout").textContent = tout;
+        $(prefix + "-total").textContent = tin + tout;
+        $(prefix + "-lat").textContent = latCount ? (Math.round((latSum / latCount) * 10) / 10) + " ms" : "- ms";
+        $(prefix + "-cost").textContent = moves ? (cost / moves * 100).toFixed(5) + " cents" : "-";
+        $(prefix + "-spend").textContent = "$" + cost.toFixed(6);
+        const elapsed = t0 ? (performance.now() - t0) / 1000 : 0;
+        $(prefix + "-elapsed").textContent = Math.round(elapsed) + " s";
+        $(prefix + "-mps").textContent = elapsed > 0 ? (moves / elapsed).toFixed(2) : "-";
+        const c = lastConf != null ? " conf " + lastConf.toFixed(2) : "";
+        const l = lastLat != null ? " " + lastLat + "ms" : "";
+        $(prefix + "-last").textContent = lastDir + c + l;
+      }
+      function status(msg, bad = false) { const el = $(prefix + "-status"); el.textContent = msg; el.className = "status" + (bad ? " bad" : ""); }
+
+      function step() {
+        if (!alive) return;
+        dir = nextDir;
+        const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+        if (head.x < 0 || head.y < 0 || head.x >= GRID || head.y >= GRID) return die("hit wall");
+        if (snake.some((s) => s.x === head.x && s.y === head.y)) return die("hit self");
+        snake.unshift(head);
+        if (head.x === food.x && head.y === food.y) { score++; food = placeFood(); } else snake.pop();
+        moves++; hud(); draw();
+      }
+      function die(reason) { alive = false; status("GAME OVER - " + reason, true); }
+
+      async function ask() {
+        if (!alive) return;
+        busy = true;
+        try {
+          const r = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ snake, food, direction: dirName(dir), size: GRID }) });
+          const j = await r.json();
+          if (!j.ok) throw new Error(j.error || "request failed");
+          if (j.doomed) { die("trapped"); return; }
+          tin += j.usage?.input_tokens ?? 0; tout += j.usage?.output_tokens ?? 0;
+          cost += j.cost ?? 0;
+          if (j.latencyMs) { latSum += j.latencyMs; latCount++; lastLat = j.latencyMs; } else lastLat = null;
+          lastDir = j.direction + (j.forced ? " (forced)" : "");
+          lastConf = j.confidence ?? null;
+          const nd = nameDir(j.direction);
+          if (nd && !(nd.x === -dir.x && nd.y === -dir.y)) nextDir = nd;
+          hud();
+        } catch (e) { status(e.message, true); throw e; }
+        finally { busy = false; }
+      }
+
+      return {
+        reset, step, ask, draw, hud,
+        get alive() { return alive; },
+        get busy() { return busy; },
+        get total() { return tin + tout; },
+        get tin() { return tin; },
+        get tout() { return tout; },
+        get moves() { return moves; },
+        get score() { return score; },
+        get food() { return food; },
+        get cost() { return cost; },
+        status,
+      };
+    }
+
+    const jev = makeGame("jev", "#39ff14", "/api/move");
+    const claude = makeGame("claude", "#ff5cf4", "/api/move-claude");
+
+    let auto = false;
+    let hudTimer = null;
+    let t0 = 0;
+
+    function resetBoth() {
+      jev.reset();
+      claude.reset(jev.food);   // same food -> identical starting input
+      t0 = 0;
+    }
+
+    async function runLoop(game) {
+      const speed = parseInt($("speed").value, 10);
+      while (auto && game.alive) {
+        try { await game.ask(); } catch (e) { break; }
+        if (!auto || !game.alive) break;
+        game.step();
+        if (!t0) t0 = performance.now();
+        await new Promise((r) => setTimeout(r, speed));
+      }
+    }
+
+    function startAuto() {
+      if (!jev.alive || !claude.alive) resetBoth();
+      auto = true; updatePlayBtn();
+      runLoop(jev);
+      runLoop(claude);
+      hudTimer = setInterval(() => { jev.hud(); claude.hud(); }, 250);
+    }
+    function stopAuto() { auto = false; updatePlayBtn(); if (hudTimer) { clearInterval(hudTimer); hudTimer = null; } }
+    function updatePlayBtn() {
+      const b = $("play");
+      b.textContent = auto ? "STOP" : "AUTO-PLAY";
+      b.classList.toggle("go", !auto);
+    }
+
+    // --- wire controls ---
+    $("play").addEventListener("click", () => { auto ? stopAuto() : startAuto(); });
+    $("step").addEventListener("click", async () => { if (!auto) { await Promise.allSettled([jev.ask(), claude.ask()]); jev.step(); claude.step(); } });
+    $("reset").addEventListener("click", () => { stopAuto(); resetBoth(); });
+    $("size").addEventListener("change", () => { stopAuto(); resetBoth(); });
+
+    // --- pricing card (from /api/pricing) ---
+    fetch("/api/pricing").then(r => r.json()).then(p => {
+      const usd = (v) => "$" + v.toFixed(v < 1 ? 3 : 2);
+      $("p-jev-in").textContent = usd(p.jev.inPerMtok);
+      $("p-jev-out").textContent = p.jev.outputFree ? "FREE" : usd(p.jev.outPerMtok);
+      $("p-jev-note").textContent = p.jev.outputFree ? "input only" : "-";
+      $("p-claude-in").textContent = usd(p.claude.inPerMtok);
+      $("p-claude-out").textContent = p.claude.outputFree ? "FREE" : usd(p.claude.outPerMtok);
+      $("p-claude-note").textContent = p.claude.outputFree ? "input only" : "output billed";
+      // per-move estimate using measured token counts (jev ~529in/38out, claude ~263in/3out)
+      const jCost = (529 * p.jev.inPerMtok + 38 * p.jev.outPerMtok) / 1e6;
+      const cCost = (263 * p.claude.inPerMtok + 3 * p.claude.outPerMtok) / 1e6;
+      const ratio = cCost / jCost;
+      $("verdict").innerHTML =
+        `per move (est): <b class="j" style="color:var(--jev)">JEV ~${(jCost * 100).toFixed(4)} cents</b> &nbsp; ` +
+        `<b class="c" style="color:var(--claude)">CLAUDE ~${(cCost * 100).toFixed(4)} cents</b><br>` +
+        `&gt; CLAUDE costs about <b>${ratio.toFixed(0)}x</b> more per move than JEV, despite using fewer tokens.`;
+    }).catch(() => { $("verdict").textContent = "could not load pricing"; });
+
+    // fetch the claude model name for the pill
+    fetch("/api/claude-model").then(r => r.json()).then(j => { if (j.model) $("claude-model-pill").textContent = j.model; }).catch(() => {});
+
+    resetBoth();
+  </script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "name": "jev-speed",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A small app that shows how fast the Jev model is by measuring real TypeSafe API round-trip latency.",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2"
+  }
+}

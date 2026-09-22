@@ -1,0 +1,4 @@
+# Keep your TypeSafe API key out of version control.
+.env
+api_key.txt
+node_modules/
