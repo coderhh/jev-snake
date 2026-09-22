@@ -9,6 +9,8 @@ Code owns the game rules (grid, collisions, legal-move filtering, timing). Each 
 
 ![pixel theme](https://img.shields.io/badge/theme-pixel-39ff14) ![node](https://img.shields.io/badge/node-%3E%3D20-blue)
 
+![JEV vs CLAUDE Snake screenshot](docs/screenshot.png)
+
 ---
 
 ## Why this exists
@@ -19,7 +21,7 @@ This app makes the tradeoff concrete:
 
 - **Speed** — Jev answers in ~1s/move; Claude Fable 5.1 in ~7s/move. Each snake runs on its own loop and moves the instant its model answers, so you watch Jev race ahead.
 - **Tokens** — Jev uses *more* tokens per move (richer structured request + full probability output) than Claude's one-word reply.
-- **Cost** — but Jev bills **input only (output is free)** at **$0.042/Mtok**, while Claude Fable 5.1 is **$10/Mtok in / $50/Mtok out**. Net result: **Jev is ~125× cheaper per move** despite using more tokens. The on-page price table and verdict show this live.
+- **Cost** — but Jev bills **input only (output is free)** at **$0.042/Mtok**, while Claude Fable 5.1 is priced far higher (per Anthropic's pricing page; adjust in `.env` to match your Azure bill). Net result: **Jev is dramatically cheaper per move** — often hundreds of times cheaper — despite using more tokens. The exact multiplier depends on your configured prices and is shown live in the on-page price table (see screenshot above).
 
 ---
 
