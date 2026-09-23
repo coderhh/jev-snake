@@ -2,3 +2,6 @@
 .env
 api_key.txt
 node_modules/
+
+s.err
+s.out
