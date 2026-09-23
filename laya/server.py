@@ -144,6 +144,15 @@ def predict(body):
 
 
 class Handler(BaseHTTPRequestHandler):
+    # HTTP/1.1 + TCP_NODELAY avoids the ~40ms Nagle/delayed-ACK stall on small
+    # JSON responses that otherwise dominates per-call latency.
+    protocol_version = "HTTP/1.1"
+
+    def setup(self):
+        import socket as _socket
+        self.request.setsockopt(_socket.IPPROTO_TCP, _socket.TCP_NODELAY, 1)
+        super().setup()
+
     def _send(self, code, obj):
         data = json.dumps(obj).encode()
         self.send_response(code)
@@ -152,6 +161,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(data)))
         self.end_headers()
         self.wfile.write(data)
+        self.wfile.flush()
 
     def do_GET(self):
         if self.path == "/health":
