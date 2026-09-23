@@ -95,7 +95,7 @@ Open <http://localhost:3000>.
 - **AUTO-PLAY** — starts both snakes; each moves at its own model's speed (no waiting). Click again to stop.
 - **STEP** — one move for both (useful to inspect a single decision).
 - **RESET** — new board; both snakes start from the *identical* snake + food for a fair race.
-- **TICK / GRID** — speed and board size.
+- **GRID** — board size. There is no tick delay: each snake advances the instant its model answers, so the real speed difference is visible (Laya ≈ 86 ms/move, Jev ≈ 326 ms/move, Claude ≈ seconds/move).
 - Arrows / WASD also work for manual play.
 
 Each panel shows: score, moves, tokens in/out, total tokens, **cost per move**, **total spent**, avg latency, moves/sec, elapsed, and the last decision (with confidence for Jev).

@@ -101,7 +101,6 @@
     <p class="sub">&gt; three snakes, one race. code owns the rules, models pick the move. who plays better &amp; what it costs.</p>
 
     <div class="controls">
-      <div><label for="speed">TICK</label><select id="speed"><option value="600">SLOW 600</option><option value="350" selected>NORMAL 350</option><option value="180">FAST 180</option></select></div>
       <div><label for="size">GRID</label><select id="size"><option value="10">10x10</option><option value="15" selected>15x15</option><option value="20">20x20</option></select></div>
       <button id="play" class="go">AUTO-PLAY</button>
       <button id="step">STEP</button>
@@ -300,13 +299,13 @@
     }
 
     async function runLoop(game) {
-      const speed = parseInt($("speed").value, 10);
       while (auto && game.alive) {
         try { await game.ask(); } catch (e) { break; }
         if (!auto || !game.alive) break;
         game.step();
         if (!t0) t0 = performance.now();
-        await new Promise((r) => setTimeout(r, speed));
+        // No artificial tick: each snake advances as fast as its model answers,
+        // so the real speed difference is visible.
       }
     }
 
