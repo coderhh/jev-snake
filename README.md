@@ -4,7 +4,7 @@ A pixel-themed Snake game where three models race side by side:
 
 - **Jev** — TypeSafe's System One decision model (`jev-latest`), called via the TypeSafe API.
 - **Claude Fable 5.1** — called via **Azure AI Foundry** (Anthropic messages API at an Azure endpoint).
-- **Laya** — a self-hosted System One model ([convaiinnovations/laya](https://huggingface.co/convaiinnovations/laya)) running locally on your GPU via `laya/server.py`.
+- **Laya** — a self-hosted System One model ([convaiinnovations/laya](https://huggingface.co/convaiinnovations/laya)) running locally on your GPU via `laya/server.py`. Laya's base checkpoint is poor at this spatial steering task zero-shot (it hugs walls and rarely reaches food), so `laya/server.py` adds a **code steering assist**: Laya picks among legal moves, but if its choice would increase distance to the food, code overrides to the distance-minimizing move (flagged `(assist)` in the UI). Laya drives when it heads toward food; code prevents it from wandering.
 
 Code owns the game rules (grid, collisions, legal-move filtering, timing). Each model only picks the next direction from the **legal, non-fatal moves** — it never gets the chance to pick a move that would instantly kill the snake. The app then measures **latency**, **token usage**, and **cost** for every move so you can compare the two models on the same task.
 

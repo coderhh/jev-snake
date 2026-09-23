@@ -83,20 +83,22 @@ def predict(body):
                 "usage": {"input_tokens": 0, "output_tokens": 0}, "cost": 0.0, "latencyMs": 0.0}
 
     grid = build_grid(snake, food, size)
-    state = {
-        "size": size,
-        "direction": direction,
-        "grid": grid,
-        "legend": {".": "empty", "#": "snake body", "H": "snake head", "F": "food"},
-    }
+    hx, hy = snake[0]
+    fx, fy = food
+    state = (
+        f"Snake on a {size}x{size} grid. Row 0 is the top; column 0 is the left.\n"
+        f"Head H is at row {hy}, column {hx}. Current heading: {direction}.\n"
+        f"Food F is at row {fy}, column {fx}.\n"
+        f"Board ('.' empty, '#' body, 'H' head, 'F' food):\n{grid}\n"
+        f"Pick the legal move that takes the head one step closer to the food."
+    )
     questions = {
         "move": {
             "type": "choice",
             "instructions": (
-                "You are playing Snake on a `size`x`size` grid. `grid` shows the board row by row: "
-                "'.' is empty, '#' is the snake body, 'H' is the head, 'F' is the food. "
-                "`direction` is the current heading. The options below are the only legal moves. "
-                "Pick the one that best steers the head toward the food."
+                "You are playing Snake. `state` gives the head and food coordinates and the board. "
+                "The options below are the only legal moves. Pick the one that moves the head "
+                "one step closer to the food (reducing row or column distance to it)."
             ),
             "criteria": {n: CRITERIA[n] for n in safe},
         }
@@ -106,13 +108,33 @@ def predict(body):
     res = ROUTER.predict(state, questions)
     lat = (time.perf_counter() - t0) * 1000.0
     ans = res.get("answers", {}).get("move", {})
-    choice = ans.get("choice")
-    if choice not in safe:
-        choice = safe[0]  # fallback to first legal move if the model picks something invalid
+    laya_choice = ans.get("choice")
+
+    # --- code steering assist ---
+    # Laya's base checkpoint is poor at this spatial task and tends to hug walls.
+    # Let Laya drive when its choice reduces distance to the food; otherwise fall
+    # back to the safe move that minimizes distance (greedy), and flag it as an assist.
+    head = snake[0]
+    fx, fy = food
+
+    def dist_after(name):
+        dx, dy = DIRS[name]
+        nx, ny = head[0] + dx, head[1] + dy
+        return abs(nx - fx) + abs(ny - fy)
+
+    best = min(safe, key=dist_after) if safe else None
+    assist = False
+    if laya_choice in safe and dist_after(laya_choice) <= dist_after(best):
+        choice = laya_choice  # Laya is heading toward the food -> trust it
+    else:
+        choice = best  # code assist: steer toward the food
+        assist = True
+
     return {
         "ok": True,
         "direction": choice,
         "confidence": ans.get("confidence"),
+        "assist": assist,
         "safeMoves": safe,
         "latencyMs": round(lat * 10) / 10,
         "usage": None,   # local model: no token billing

@@ -148,7 +148,7 @@
       </div>
 
       <div class="card laya">
-        <h2><span class="dot" style="background:var(--laya)"></span>LAYA <span class="pill">LOCAL GPU</span></h2>
+        <h2><span class="dot" style="background:var(--laya)"></span>LAYA <span class="pill">LOCAL + ASSIST</span></h2>
         <canvas class="game" id="laya-canvas" width="520" height="520"></canvas>
         <div class="grid2">
           <div class="stat"><div class="k">SCORE</div><div class="v" id="laya-score">0</div></div>
@@ -258,7 +258,7 @@
           tin += j.usage?.input_tokens ?? 0; tout += j.usage?.output_tokens ?? 0;
           cost += j.cost ?? 0;
           if (j.latencyMs) { latSum += j.latencyMs; latCount++; lastLat = j.latencyMs; } else lastLat = null;
-          lastDir = j.direction + (j.forced ? " (forced)" : "");
+          lastDir = j.direction + (j.forced ? " (forced)" : "") + (j.assist ? " (assist)" : "");
           lastConf = j.confidence ?? null;
           const nd = nameDir(j.direction);
           if (nd && !(nd.x === -dir.x && nd.y === -dir.y)) nextDir = nd;

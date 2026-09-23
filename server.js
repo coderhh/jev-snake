@@ -305,6 +305,7 @@ app.post("/api/move-laya", async (req, res) => {
       forced: data.forced || false,
       direction: data.direction,
       confidence: data.confidence ?? null,
+      assist: data.assist || false,
       safeMoves: data.safeMoves,
       latencyMs: data.latencyMs ?? 0,
       usage: data.usage, // null
