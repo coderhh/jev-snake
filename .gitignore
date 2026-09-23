@@ -5,3 +5,5 @@ node_modules/
 
 s.err
 s.out
+
+diag-*.mjs
