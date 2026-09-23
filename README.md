@@ -1,9 +1,10 @@
 # Jev vs Claude — Snake
 
-A pixel-themed Snake game where two models race side by side:
+A pixel-themed Snake game where three models race side by side:
 
 - **Jev** — TypeSafe's System One decision model (`jev-latest`), called via the TypeSafe API.
 - **Claude Fable 5.1** — called via **Azure AI Foundry** (Anthropic messages API at an Azure endpoint).
+- **Laya** — a self-hosted System One model ([convaiinnovations/laya](https://huggingface.co/convaiinnovations/laya)) running locally on your GPU via `laya/server.py`.
 
 Code owns the game rules (grid, collisions, legal-move filtering, timing). Each model only picks the next direction from the **legal, non-fatal moves** — it never gets the chance to pick a move that would instantly kill the snake. The app then measures **latency**, **token usage**, and **cost** for every move so you can compare the two models on the same task.
 
@@ -21,7 +22,7 @@ This app makes the tradeoff concrete:
 
 - **Speed** — Jev answers in ~1s/move; Claude Fable 5.1 in ~7s/move. Each snake runs on its own loop and moves the instant its model answers, so you watch Jev race ahead.
 - **Tokens** — Jev uses *more* tokens per move (richer structured request + full probability output) than Claude's one-word reply.
-- **Cost** — but Jev bills **input only (output is free)** at **$0.042/Mtok**, while Claude Fable 5.1 is priced far higher (per Anthropic's pricing page; adjust in `.env` to match your Azure bill). Net result: **Jev is dramatically cheaper per move** — often hundreds of times cheaper — despite using more tokens. The exact multiplier depends on your configured prices and is shown live in the on-page price table (see screenshot above).
+- **Cost** — but Jev bills **input only (output is free)** at **$0.042/Mtok**, while Claude Fable 5.1 is priced far higher (per Anthropic's pricing page; adjust in `.env` to match your Azure bill). **Laya is self-hosted, so it's $0**. Net result: **Jev is dramatically cheaper per move than Claude — often hundreds of times cheaper — despite using more tokens, and Laya is free.** The exact multiplier depends on your configured prices and is shown live in the on-page price table (see screenshot above).
 
 ---
 
@@ -67,11 +68,17 @@ AZURE_MODEL=claude-fable-5-1
 
 # Pricing (USD per million tokens) for the live cost analysis.
 # Jev bills INPUT ONLY (output is free). Claude Fable 5.1 per Anthropic's pricing page.
+# Laya is self-hosted -> always $0 (no env var needed).
 JEV_PRICE_IN_PER_MTOK=0.042
 JEV_PRICE_OUT_PER_MTOK=0
 CLAUDE_PRICE_IN_PER_MTOK=10
 CLAUDE_PRICE_OUT_PER_MTOK=50
+
+# Optional: override the local Laya server URL (default below).
+# LAYA_URL=http://127.0.0.1:8000/predict
 ```
+
+**Laya snake (optional):** to enable the third snake, start the local Laya server — see [`laya/README.md`](laya/README.md). Without it, the Laya panel shows an error but the Jev and Claude snakes still run.
 
 Run:
 
@@ -108,8 +115,9 @@ The **PRICE TABLE** card reads `/api/pricing` and shows a live per-move cost est
 ## Project layout
 
 ```
-server.js          Express server: /api/move, /api/move-claude, /api/pricing
-public/index.html  Pixel-themed UI, two Snake games, price table
+server.js          Express server: /api/move, /api/move-claude, /api/move-laya, /api/pricing
+public/index.html  Pixel-themed UI, three Snake games, price table
+laya/server.py     Local Laya inference server (Python, runs on GPU)
 .env               (gitignored) keys + pricing
 .agents/skills/    TypeSafe agent skill (installed via `npx skills add`)
 ```

@@ -7,11 +7,15 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const API_KEY = process.env.TYPESAFE_API_KEY;
 const API_URL = "https://api.typesafe.ai/v1/systemone";
-// Pricing (USD per million tokens). Jev bills input only (output is free).
+// Local Laya inference server (see D:\Projects\laya\server.py).
+const LAYA_URL = process.env.LAYA_URL || "http://127.0.0.1:8000/predict";
+// Pricing (USD per million tokens). Jev bills input only (output is free). Laya is self-hosted -> free.
 const JEV_IN = parseFloat(process.env.JEV_PRICE_IN_PER_MTOK || "0.042");
 const JEV_OUT = parseFloat(process.env.JEV_PRICE_OUT_PER_MTOK || "0");
 const CLAUDE_IN = parseFloat(process.env.CLAUDE_PRICE_IN_PER_MTOK || "0.80");
 const CLAUDE_OUT = parseFloat(process.env.CLAUDE_PRICE_OUT_PER_MTOK || "4.0");
+const LAYA_IN = 0;
+const LAYA_OUT = 0;
 function costUsd(usage, priceIn, priceOut) {
   const i = usage?.input_tokens ?? 0;
   const o = usage?.output_tokens ?? 0;
@@ -278,10 +282,48 @@ app.get("/api/claude-model", (req, res) => {
   res.json({ model: AZURE_MODEL, configured: Boolean(AZURE_API_KEY && AZURE_ENDPOINT) });
 });
 
+// --- Snake: local Laya picks the next direction (proxied to the Python Laya server) ---
+app.post("/api/move-laya", async (req, res) => {
+  const { snake, food, direction, size } = req.body || {};
+  if (!Array.isArray(snake) || !food || !direction || !size) {
+    return res.status(422).json({ error: "snake, food, direction and size are required" });
+  }
+  try {
+    const r = await fetch(LAYA_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ snake, food, direction, size }),
+    });
+    const data = await r.json();
+    if (!r.ok || !data.ok) {
+      return res.status(r.status || 500).json({ ok: false, error: (data && data.error) || `Laya ${r.status}` });
+    }
+    // Laya is self-hosted: usage null, cost 0. Forward everything else as-is.
+    res.json({
+      ok: true,
+      doomed: data.doomed || false,
+      forced: data.forced || false,
+      direction: data.direction,
+      confidence: data.confidence ?? null,
+      safeMoves: data.safeMoves,
+      latencyMs: data.latencyMs ?? 0,
+      usage: data.usage, // null
+      cost: 0,
+      routing: data.routing,
+    });
+  } catch (err) {
+    res.status(502).json({
+      ok: false,
+      error: `Laya server unreachable at ${LAYA_URL}. Is D:\\Projects\\laya\\server.py running? (${err.message})`,
+    });
+  }
+});
+
 app.get("/api/pricing", (req, res) => {
   res.json({
     jev: { inPerMtok: JEV_IN, outPerMtok: JEV_OUT, outputFree: JEV_OUT === 0 },
     claude: { inPerMtok: CLAUDE_IN, outPerMtok: CLAUDE_OUT, outputFree: CLAUDE_OUT === 0 },
+    laya: { inPerMtok: LAYA_IN, outPerMtok: LAYA_OUT, outputFree: true, selfHosted: true },
   });
 });
 

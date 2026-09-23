@@ -9,7 +9,7 @@
   <style>
     :root{
       --bg:#0d0d1f; --panel:#1a1a2e; --panel2:#24244a; --ink:#e8e8f8; --dim:#8a8ab8;
-      --jev:#39ff14; --claude:#ff5cf4; --bad:#ff3860; --yellow:#ffe66d; --border:#3a3a6a;
+      --jev:#39ff14; --claude:#ff5cf4; --laya:#2ee6ff; --bad:#ff3860; --yellow:#ffe66d; --border:#3a3a6a;
     }
     *{box-sizing:border-box; image-rendering:pixelated;}
     html{image-rendering:pixelated;}
@@ -49,14 +49,16 @@
     button:disabled{opacity:.5; cursor:not-allowed;}
     button.go{background:var(--jev); color:#062b00; border-color:#0a3; text-shadow:1px 1px 0 #fff8;}
     button.go:active{box-shadow:1px 1px 0 #000;}
-    .games{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
-    @media(max-width:860px){.games{grid-template-columns:1fr;}}
+    .games{display:grid; grid-template-columns:repeat(3,1fr); gap:14px;}
+    @media(max-width:1100px){.games{grid-template-columns:1fr 1fr;}}
+    @media(max-width:760px){.games{grid-template-columns:1fr;}}
     .card{
       background:var(--panel); border:4px solid var(--border); padding:14px;
       box-shadow:5px 5px 0 #000;
     }
     .card.jev{border-color:var(--jev);}
     .card.claude{border-color:var(--claude);}
+    .card.laya{border-color:var(--laya);}
     .card h2{
       margin:0 0 12px; font-size:15px; font-family:"Press Start 2P",monospace;
       display:flex; align-items:center; gap:8px; letter-spacing:0;
@@ -85,6 +87,7 @@
     table.prices th{background:var(--panel2); font-family:"Press Start 2P",monospace; font-size:12px; color:var(--yellow);}
     table.prices td.j{color:var(--jev);}
     table.prices td.c{color:var(--claude);}
+    table.prices td.l{color:var(--laya);}
     .verdict{
       margin-top:12px; padding:10px; background:var(--panel2); border:3px solid var(--border);
       box-shadow:inset 2px 2px 0 #000; font-size:18px;
@@ -94,8 +97,8 @@
 </head>
 <body>
   <div class="wrap">
-    <h1>JEV vs CLAUDE <span class="pill">SNAKE</span></h1>
-    <p class="sub">&gt; two snakes, one race. code owns the rules, models pick the move. who plays better &amp; what it costs.</p>
+    <h1>JEV vs CLAUDE vs LAYA <span class="pill">SNAKE</span></h1>
+    <p class="sub">&gt; three snakes, one race. code owns the rules, models pick the move. who plays better &amp; what it costs.</p>
 
     <div class="controls">
       <div><label for="speed">TICK</label><select id="speed"><option value="600">SLOW 600</option><option value="350" selected>NORMAL 350</option><option value="180">FAST 180</option></select></div>
@@ -143,6 +146,25 @@
         <div class="row"><span class="k">LAST MOVE</span><span class="v" id="claude-last">-</span></div>
         <div class="status" id="claude-status"></div>
       </div>
+
+      <div class="card laya">
+        <h2><span class="dot" style="background:var(--laya)"></span>LAYA <span class="pill">LOCAL GPU</span></h2>
+        <canvas class="game" id="laya-canvas" width="520" height="520"></canvas>
+        <div class="grid2">
+          <div class="stat"><div class="k">SCORE</div><div class="v" id="laya-score">0</div></div>
+          <div class="stat"><div class="k">MOVES</div><div class="v" id="laya-moves">0</div></div>
+          <div class="stat"><div class="k">TOK IN</div><div class="v" id="laya-tin">0</div></div>
+          <div class="stat"><div class="k">TOK OUT</div><div class="v" id="laya-tout">0</div></div>
+        </div>
+        <div class="row"><span class="k">TOTAL TOKENS</span><span class="v" id="laya-total">0</span></div>
+        <div class="row"><span class="k">COST / MOVE</span><span class="v" id="laya-cost">-</span></div>
+        <div class="row"><span class="k">TOTAL SPENT</span><span class="v" id="laya-spend">$0.000000</span></div>
+        <div class="row"><span class="k">AVG LATENCY</span><span class="v" id="laya-lat">- ms</span></div>
+        <div class="row"><span class="k">MOVES / SEC</span><span class="v" id="laya-mps">-</span></div>
+        <div class="row"><span class="k">ELAPSED</span><span class="v" id="laya-elapsed">0 s</span></div>
+        <div class="row"><span class="k">LAST MOVE</span><span class="v" id="laya-last">-</span></div>
+        <div class="status" id="laya-status"></div>
+      </div>
     </div>
 
     <div class="card price-card">
@@ -152,6 +174,7 @@
         <tbody>
           <tr><td class="j">JEV (jev-1.13)</td><td id="p-jev-in">-</td><td id="p-jev-out">-</td><td id="p-jev-note">-</td></tr>
           <tr><td class="c">CLAUDE FABLE 5.1</td><td id="p-claude-in">-</td><td id="p-claude-out">-</td><td id="p-claude-note">-</td></tr>
+          <tr><td class="l">LAYA (local)</td><td id="p-laya-in">-</td><td id="p-laya-out">-</td><td id="p-laya-note">-</td></tr>
         </tbody>
       </table>
       <div class="verdict" id="verdict">loading price comparison...</div>
@@ -261,14 +284,18 @@
 
     const jev = makeGame("jev", "#39ff14", "/api/move");
     const claude = makeGame("claude", "#ff5cf4", "/api/move-claude");
+    const laya = makeGame("laya", "#2ee6ff", "/api/move-laya");
+    const games = [jev, claude, laya];
 
     let auto = false;
     let hudTimer = null;
     let t0 = 0;
 
-    function resetBoth() {
+    function resetAll() {
       jev.reset();
-      claude.reset(jev.food);   // same food -> identical starting input
+      const f = jev.food;
+      claude.reset(f);   // same food -> identical starting input
+      laya.reset(f);
       t0 = 0;
     }
 
@@ -284,11 +311,10 @@
     }
 
     function startAuto() {
-      if (!jev.alive || !claude.alive) resetBoth();
+      if (games.some((g) => !g.alive)) resetAll();
       auto = true; updatePlayBtn();
-      runLoop(jev);
-      runLoop(claude);
-      hudTimer = setInterval(() => { jev.hud(); claude.hud(); }, 250);
+      games.forEach(runLoop);
+      hudTimer = setInterval(() => { games.forEach((g) => g.hud()); }, 250);
     }
     function stopAuto() { auto = false; updatePlayBtn(); if (hudTimer) { clearInterval(hudTimer); hudTimer = null; } }
     function updatePlayBtn() {
@@ -299,9 +325,11 @@
 
     // --- wire controls ---
     $("play").addEventListener("click", () => { auto ? stopAuto() : startAuto(); });
-    $("step").addEventListener("click", async () => { if (!auto) { await Promise.allSettled([jev.ask(), claude.ask()]); jev.step(); claude.step(); } });
-    $("reset").addEventListener("click", () => { stopAuto(); resetBoth(); });
-    $("size").addEventListener("change", () => { stopAuto(); resetBoth(); });
+    $("step").addEventListener("click", async () => {
+      if (!auto) { await Promise.allSettled(games.map((g) => g.ask())); games.forEach((g) => g.step()); }
+    });
+    $("reset").addEventListener("click", () => { stopAuto(); resetAll(); });
+    $("size").addEventListener("change", () => { stopAuto(); resetAll(); });
 
     // --- pricing card (from /api/pricing) ---
     fetch("/api/pricing").then(r => r.json()).then(p => {
@@ -312,20 +340,25 @@
       $("p-claude-in").textContent = usd(p.claude.inPerMtok);
       $("p-claude-out").textContent = p.claude.outputFree ? "FREE" : usd(p.claude.outPerMtok);
       $("p-claude-note").textContent = p.claude.outputFree ? "input only" : "output billed";
-      // per-move estimate using measured token counts (jev ~529in/38out, claude ~263in/3out)
+      $("p-laya-in").textContent = p.laya.selfHosted ? "FREE" : usd(p.laya.inPerMtok);
+      $("p-laya-out").textContent = "FREE";
+      $("p-laya-note").textContent = "self-hosted, $0";
+      // per-move estimate using measured token counts (jev ~529in/38out, claude ~263in/3out, laya 0)
       const jCost = (529 * p.jev.inPerMtok + 38 * p.jev.outPerMtok) / 1e6;
       const cCost = (263 * p.claude.inPerMtok + 3 * p.claude.outPerMtok) / 1e6;
-      const ratio = cCost / jCost;
+      const lCost = 0;
+      const ratio = jCost > 0 ? cCost / jCost : 0;
       $("verdict").innerHTML =
-        `per move (est): <b class="j" style="color:var(--jev)">JEV ~${(jCost * 100).toFixed(4)} cents</b> &nbsp; ` +
-        `<b class="c" style="color:var(--claude)">CLAUDE ~${(cCost * 100).toFixed(4)} cents</b><br>` +
-        `&gt; CLAUDE costs about <b>${ratio.toFixed(0)}x</b> more per move than JEV, despite using fewer tokens.`;
+        `per move (est): <b style="color:var(--jev)">JEV ~${(jCost * 100).toFixed(4)} cents</b> &nbsp; ` +
+        `<b style="color:var(--claude)">CLAUDE ~${(cCost * 100).toFixed(4)} cents</b> &nbsp; ` +
+        `<b style="color:var(--laya)">LAYA ~${(lCost * 100).toFixed(4)} cents (free)</b><br>` +
+        `&gt; CLAUDE costs about <b>${ratio.toFixed(0)}x</b> more per move than JEV; LAYA is self-hosted and free.`;
     }).catch(() => { $("verdict").textContent = "could not load pricing"; });
 
     // fetch the claude model name for the pill
     fetch("/api/claude-model").then(r => r.json()).then(j => { if (j.model) $("claude-model-pill").textContent = j.model; }).catch(() => {});
 
-    resetBoth();
+    resetAll();
   </script>
 </body>
 </html>
