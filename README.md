@@ -1,4 +1,4 @@
-# Jev vs Claude — Snake
+# Jev vs Claude vs Laya — Snake
 
 A pixel-themed Snake game where three models race side by side:
 
@@ -6,11 +6,11 @@ A pixel-themed Snake game where three models race side by side:
 - **Claude Fable 5.1** — called via **Azure AI Foundry** (Anthropic messages API at an Azure endpoint).
 - **Laya** — a self-hosted System One model ([convaiinnovations/laya](https://huggingface.co/convaiinnovations/laya)) running locally on your GPU via `laya/server.py`. Laya's base checkpoint is poor at this spatial steering task zero-shot (it hugs walls and rarely reaches food), so `laya/server.py` adds a **code steering assist**: Laya picks among legal moves, but if its choice would increase distance to the food, code overrides to the distance-minimizing move (flagged `(assist)` in the UI). Laya drives when it heads toward food; code prevents it from wandering.
 
-Code owns the game rules (grid, collisions, legal-move filtering, timing). Each model only picks the next direction from the **legal, non-fatal moves** — it never gets the chance to pick a move that would instantly kill the snake. The app then measures **latency**, **token usage**, and **cost** for every move so you can compare the two models on the same task.
+Code owns the game rules (grid, collisions, legal-move filtering, timing). Each model only picks the next direction from the **legal, non-fatal moves** — it never gets the chance to pick a move that would instantly kill the snake. The app then measures **latency**, **token usage**, and **cost** for every move so you can compare the three models on the same task.
 
 ![pixel theme](https://img.shields.io/badge/theme-pixel-39ff14) ![node](https://img.shields.io/badge/node-%3E%3D20-blue)
 
-![JEV vs CLAUDE Snake screenshot](docs/image.png)
+![JEV vs CLAUDE vs LAYA Snake screenshot](docs/image.png)
 
 ---
 
@@ -20,20 +20,21 @@ Jev is a **System One** model: it returns fast, *typed* judgments (a `Choice` ov
 
 This app makes the tradeoff concrete:
 
-- **Speed** — Jev answers in ~1s/move; Claude Fable 5.1 in ~7s/move. Each snake runs on its own loop and moves the instant its model answers, so you watch Jev race ahead.
-- **Tokens** — Jev uses *more* tokens per move (richer structured request + full probability output) than Claude's one-word reply.
-- **Cost** — but Jev bills **input only (output is free)** at **$0.042/Mtok**, while Claude Fable 5.1 is priced far higher (per Anthropic's pricing page; adjust in `.env` to match your Azure bill). **Laya is self-hosted, so it's $0**. Net result: **Jev is dramatically cheaper per move than Claude — often hundreds of times cheaper — despite using more tokens, and Laya is free.** The exact multiplier depends on your configured prices and is shown live in the on-page price table (see screenshot above).
+- **Speed** — each snake runs its own loop and advances **the instant its model answers** (no artificial tick), so the real speed gap is visible. Measured warm per move on an RTX 3060: **Laya ≈ 28–80 ms** (local GPU, after a `TCP_NODELAY` fix — see [laya/README.md](laya/README.md)), **Jev ≈ 220–330 ms** (TypeSafe API over the network), **Claude Fable 5.1 ≈ seconds**. Laya is the fastest; Jev is next; Claude is far behind.
+- **Tokens** — Jev uses *more* tokens per move (richer structured request + full probability output) than Claude's one-word reply. Laya is self-hosted and reports no token usage.
+- **Cost** — Jev bills **input only (output is free)** at **$0.042/Mtok**, while Claude Fable 5.1 is priced far higher (per Anthropic's pricing page; adjust in `.env` to match your Azure bill). **Laya is self-hosted, so it's $0**. Net result: **Jev is dramatically cheaper per move than Claude — often hundreds of times cheaper — despite using more tokens, and Laya is free.** The exact multiplier depends on your configured prices and is shown live in the on-page price table (see screenshot above).
 
 ---
 
 ## How it works
 
 ```
-browser (pixel UI, two canvases)
+browser (pixel UI, three canvases)
         │  POST { snake, food, direction, size }
         ▼
-server.js  ──► /api/move        ──► TypeSafe API  (Jev, Choice question)
-         └─► /api/move-claude ──► Azure AI Foundry (Claude, messages API)
+server.js  ──► /api/move        ──► TypeSafe API        (Jev,   Choice question)
+         ├─► /api/move-claude ──► Azure AI Foundry     (Claude, messages API)
+         └─► /api/move-laya   ──► local Laya server  (Laya,  on your GPU)
 ```
 
 For each move, the server:
@@ -92,15 +93,15 @@ Open <http://localhost:3000>.
 
 ## Using it
 
-- **AUTO-PLAY** — starts both snakes; each moves at its own model's speed (no waiting). Click again to stop.
-- **STEP** — one move for both (useful to inspect a single decision).
-- **RESET** — new board; both snakes start from the *identical* snake + food for a fair race.
-- **GRID** — board size. There is no tick delay: each snake advances the instant its model answers, so the real speed difference is visible (Laya ≈ 86 ms/move, Jev ≈ 326 ms/move, Claude ≈ seconds/move).
+- **AUTO-PLAY** — starts all three snakes; each moves at its own model's speed (no waiting). Click again to stop.
+- **STEP** — one move for all three (useful to inspect a single decision).
+- **RESET** — new board; all three snakes start from the *identical* snake + food for a fair race.
+- **GRID** — board size. There is no tick delay: each snake advances the instant its model answers, so the real speed difference is visible (Laya ≈ 28–80 ms/move, Jev ≈ 220–330 ms/move, Claude ≈ seconds/move).
 - Arrows / WASD also work for manual play.
 
-Each panel shows: score, moves, tokens in/out, total tokens, **cost per move**, **total spent**, avg latency, moves/sec, elapsed, and the last decision (with confidence for Jev).
+Each panel shows: score, moves, tokens in/out, total tokens, **cost per move**, **total spent**, avg latency, moves/sec, elapsed, and the last decision (with confidence for Jev; `(assist)` for Laya when code steered it).
 
-The **PRICE TABLE** card reads `/api/pricing` and shows a live per-move cost estimate and the multiplier between the two models.
+The **PRICE TABLE** card reads `/api/pricing` and shows a live per-move cost estimate and the multiplier across the three models.
 
 ---
 
@@ -109,6 +110,7 @@ The **PRICE TABLE** card reads `/api/pricing` and shows a live per-move cost est
 - **Azure auth**: Azure AI Foundry's Anthropic endpoint uses `Authorization: Bearer <key>`, not `api-key`. The server sends the bearer header and `anthropic-version: 2023-06-01`.
 - **Claude output**: a system prompt forces single-word output (`up`/`down`/`left`/`right`) to keep it from reasoning out loud and burning tokens. The parser takes the last legal direction word in the reply, with a fallback to the first legal move.
 - **Pricing**: adjust the `*_PRICE_*` env vars to match your actual Azure bill if it differs from Anthropic's list price.
+- **Laya latency**: the local Laya server sets `TCP_NODELAY` + HTTP/1.1 to avoid a ~40 ms Nagle/delayed-ACK stall that otherwise dominates per-call latency. Laya's base checkpoint is poor at this spatial task zero-shot, so the server adds a code steering assist (see the Laya bullet above); its *play quality* is partly code, but its **cost ($0) and latency are genuine Laya numbers**.
 
 ---
 
@@ -127,7 +129,7 @@ laya/server.py     Local Laya inference server (Python, runs on GPU)
 ## Notes & caveats
 
 - Jev is a **judgment model, not a pathfinder** — it reads the board and picks a plausible direction, but it doesn't plan ahead. It will eventually trap itself. That's the point of the demo: you see the real quality and cost of a System One judgment driving a game loop.
-- The "same input" guarantee holds for the **starting board**; the two boards diverge once the models choose differently, because keeping them identical every move would require waiting (which defeats the speed comparison).
+- The "same input" guarantee holds for the **starting board**; the three boards diverge once the models choose differently, because keeping them identical every move would require waiting (which defeats the speed comparison).
 - Token counts come from each provider's `usage` field; cost is computed server-side from the configured prices.
 
 ---
